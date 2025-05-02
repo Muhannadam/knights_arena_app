@@ -33,10 +33,7 @@ class AStarMoveProblem(SearchProblem):
                    0 <= (state[1] + (d == 'Right') - (d == 'Left')) < GRID_SIZE]
     def result(self, state, action):
         x, y = state
-        return (x - 1, y) if action == 'Up' else \
-               (x + 1, y) if action == 'Down' else \
-               (x, y - 1) if action == 'Left' else \
-               (x, y + 1)
+        return (x - 1, y) if action == 'Up' else (x + 1, y) if action == 'Down' else (x, y - 1) if action == 'Left' else (x, y + 1)
     def is_goal(self, state): return state == self.goal
     def cost(self, s1, a, s2): return 1
     def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
@@ -68,11 +65,13 @@ def move_player(direction):
     if not st.session_state["game_over"]: ai_turn(); check_win()
     st.session_state["turn"] += 1
 
-def attack():
+def attack(type="light"):
     if st.session_state["game_over"]: return
     if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
-        st.session_state["ai_hp"] -= 1
-        st.session_state["messages"].append("🗡️ You attacked the AI!")
+        damage = 1 if type == "light" else 2
+        label = "Light Hit" if type == "light" else "Sword Attack"
+        st.session_state["ai_hp"] -= damage
+        st.session_state["messages"].append(f"{label}! You dealt {damage} damage.")
     else:
         st.session_state["messages"].append("No enemy in range.")
     check_win()
@@ -96,8 +95,7 @@ def reset_game():
 
 if "player_pos" not in st.session_state: reset_game()
 
-# واجهة
-st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena - MUHANNAD</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena</h2>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns([2.2, 1.2, 1.8])
 
 with col1:
@@ -108,13 +106,14 @@ with col1:
     st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
 
 with col2:
-    st.markdown("### 🎮")
+    st.markdown("### 🎮 Move")
     st.button("⬆️", on_click=move_player, args=("Up",), use_container_width=True)
     row = st.columns(3)
     with row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
-    with row[1]: st.button("⚔️", on_click=attack, use_container_width=True)
+    with row[1]: st.button("⚔️ Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
     with row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
     st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+    st.button("🗡️ Sword Attack", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
     st.button("🔄 Start New Game", on_click=reset_game, use_container_width=True)
 
 with col3:
