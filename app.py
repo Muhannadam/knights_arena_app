@@ -1,3 +1,6 @@
+!pip install simpleai
+!pip install streamlit
+
 import streamlit as st
 from simpleai.search import SearchProblem, astar
 
@@ -18,7 +21,7 @@ def render_grid():
         grid[px][py] = "🧍"
         grid[ax][ay] = "🤖"
 
-    html = "<div style='font-size:32px; line-height:1.5;'>"
+    html = "<div style='font-size:28px; line-height:1.3;'>"
     for row in grid:
         html += " ".join(row) + "<br>"
     html += "</div>"
@@ -73,7 +76,6 @@ def ai_turn():
 def move_player(direction):
     if st.session_state["game_over"]:
         return
-
     x, y = st.session_state["player_pos"]
     if direction == "Up" and x > 0: x -= 1
     elif direction == "Down" and x < GRID_SIZE - 1: x += 1
@@ -81,7 +83,6 @@ def move_player(direction):
     elif direction == "Right" and y < GRID_SIZE - 1: y += 1
     st.session_state["player_pos"] = [x, y]
     st.session_state["messages"].append(f"🧍 Player moved {direction}")
-
     check_win()
     if not st.session_state["game_over"]:
         ai_turn()
@@ -91,13 +92,11 @@ def move_player(direction):
 def attack():
     if st.session_state["game_over"]:
         return
-
     if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
         st.session_state["ai_hp"] -= 2
         st.session_state["messages"].append("🗡️ You attacked the AI!")
     else:
         st.session_state["messages"].append("No enemy in range.")
-
     check_win()
     if not st.session_state["game_over"]:
         ai_turn()
@@ -121,41 +120,40 @@ def reset_game():
     st.session_state["turn"] = 1
     st.session_state["game_over"] = False
 
-# Session init
+# Init session
 if "player_pos" not in st.session_state:
     reset_game()
 
-# واجهة اللعبة من عمودين: يسار للعبة، يمين للتاريخ
-left_col, right_col = st.columns([3, 1])
+# Layout: عمودين - يسار للعبة، يمين للتاريخ
+left, right = st.columns([3, 1])
 
-with left_col:
-    st.title("🛡️ Knight's Arena - Streamlit Edition")
+with left:
+    st.title("🛡️ Knight's Arena")
 
-    # النتيجة
+    # إعلان الفائز
     if st.session_state["game_over"]:
-        result_msg = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
-        st.markdown(f"## {result_msg}")
+        winner = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
+        st.markdown(f"## {winner}")
 
     render_grid()
+    st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
 
-    st.markdown(f"**Turn:** {st.session_state['turn']} | 🧍 Player HP: {st.session_state['player_hp']} | 🤖 AI HP: {st.session_state['ai_hp']}")
-
-    # لوحة التحكم: على شكل مفاتيح متقاربة
+    # أزرار الحركة والهجوم
     st.markdown("### 🎮 Controls")
-    up = st.columns([1, 1, 1])
-    with up[1]: st.button("⬆️", on_click=move_player, args=("Up",))
-
-    middle = st.columns([1, 1, 1])
-    with middle[0]: st.button("⬅️", on_click=move_player, args=("Left",))
-    with middle[1]: st.button("⚔️", on_click=attack)
-    with middle[2]: st.button("➡️", on_click=move_player, args=("Right",))
-
-    down = st.columns([1, 1, 1])
-    with down[1]: st.button("⬇️", on_click=move_player, args=("Down",))
+    c1, c2, c3 = st.columns([1,1,1])
+    with c2: st.button("⬆️", on_click=move_player, args=("Up",))
+    c1, c2, c3 = st.columns([1,1,1])
+    with c1: st.button("⬅️", on_click=move_player, args=("Left",))
+    with c2: st.button("⚔️", on_click=attack)
+    with c3: st.button("➡️", on_click=move_player, args=("Right",))
+    c1, c2, c3 = st.columns([1,1,1])
+    with c2: st.button("⬇️", on_click=move_player, args=("Down",))
 
     st.button("🔄 Start New Game", on_click=reset_game)
 
-with right_col:
+with right:
     st.markdown("### 📜 History")
+    st.markdown("<div style='max-height:420px; overflow:auto;'>", unsafe_allow_html=True)
     for msg in reversed(st.session_state["messages"][-25:]):
         st.markdown(f"- {msg}")
+    st.markdown("</div>", unsafe_allow_html=True)
