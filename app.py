@@ -1,6 +1,3 @@
-!pip install simpleai
-!pip install streamlit
-
 import streamlit as st
 from simpleai.search import SearchProblem, astar
 
