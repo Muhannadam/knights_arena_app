@@ -1,6 +1,5 @@
 
 import streamlit as st
-import numpy as np
 from simpleai.search import SearchProblem, astar
 
 GRID_SIZE = 6
@@ -123,15 +122,25 @@ def reset_game():
     st.session_state["turn"] = 1
     st.session_state["game_over"] = False
 
-# Initialize session
+# Session init
 if "player_pos" not in st.session_state:
     reset_game()
 
 # UI
 st.title("🛡️ Knight's Arena - Streamlit Edition")
+
+# Result announcement
+if st.session_state["game_over"]:
+    result_msg = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
+    st.markdown(f"## {result_msg}")
+
+# Game grid
 render_grid()
+
+# Turn and stats
 st.markdown(f"**Turn:** {st.session_state['turn']} | 🧍 Player HP: {st.session_state['player_hp']} | 🤖 AI HP: {st.session_state['ai_hp']}")
 
+# Controls
 col1, col2, col3 = st.columns(3)
 with col2:
     st.button("⬆️ Up", on_click=move_player, args=("Up",))
@@ -146,9 +155,10 @@ col1, col2, col3 = st.columns(3)
 with col2:
     st.button("⬇️ Down", on_click=move_player, args=("Down",))
 
+# Reset
 st.button("🔄 Start New Game", on_click=reset_game)
 
-st.markdown("---")
-st.markdown("### 📜 Action History:")
-for msg in st.session_state["messages"]:
-    st.markdown(f"- {msg}")
+# Action history
+with st.expander("📜 Action History (Click to expand)", expanded=True):
+    for msg in reversed(st.session_state["messages"][-30:]):
+        st.markdown(f"- {msg}")
