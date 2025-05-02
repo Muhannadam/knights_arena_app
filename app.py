@@ -1,5 +1,3 @@
-!pip install simpleai
-!pip install streamlit
 
 import streamlit as st
 import numpy as np
