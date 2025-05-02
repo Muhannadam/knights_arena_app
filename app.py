@@ -1,4 +1,3 @@
-
 import streamlit as st
 from simpleai.search import SearchProblem, astar
 
@@ -126,39 +125,37 @@ def reset_game():
 if "player_pos" not in st.session_state:
     reset_game()
 
-# UI
-st.title("🛡️ Knight's Arena")
+# واجهة اللعبة من عمودين: يسار للعبة، يمين للتاريخ
+left_col, right_col = st.columns([3, 1])
 
-# Result announcement
-if st.session_state["game_over"]:
-    result_msg = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
-    st.markdown(f"## {result_msg}")
+with left_col:
+    st.title("🛡️ Knight's Arena - Streamlit Edition")
 
-# Game grid
-render_grid()
+    # النتيجة
+    if st.session_state["game_over"]:
+        result_msg = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
+        st.markdown(f"## {result_msg}")
 
-# Turn and stats
-st.markdown(f"**Turn:** {st.session_state['turn']} | 🧍 Player HP: {st.session_state['player_hp']} | 🤖 AI HP: {st.session_state['ai_hp']}")
+    render_grid()
 
-# Controls
-col1, col2, col3 = st.columns(3)
-with col2:
-    st.button("⬆️ Up", on_click=move_player, args=("Up",))
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.button("⬅️ Left", on_click=move_player, args=("Left",))
-with col2:
-    st.button("⚔️ Attack", on_click=attack)
-with col3:
-    st.button("➡️ Right", on_click=move_player, args=("Right",))
-col1, col2, col3 = st.columns(3)
-with col2:
-    st.button("⬇️ Down", on_click=move_player, args=("Down",))
+    st.markdown(f"**Turn:** {st.session_state['turn']} | 🧍 Player HP: {st.session_state['player_hp']} | 🤖 AI HP: {st.session_state['ai_hp']}")
 
-# Reset
-st.button("🔄 Start New Game", on_click=reset_game)
+    # لوحة التحكم: على شكل مفاتيح متقاربة
+    st.markdown("### 🎮 Controls")
+    up = st.columns([1, 1, 1])
+    with up[1]: st.button("⬆️", on_click=move_player, args=("Up",))
 
-# Action history
-with st.expander("📜 Action History (Click to expand)", expanded=True):
-    for msg in reversed(st.session_state["messages"][-30:]):
+    middle = st.columns([1, 1, 1])
+    with middle[0]: st.button("⬅️", on_click=move_player, args=("Left",))
+    with middle[1]: st.button("⚔️", on_click=attack)
+    with middle[2]: st.button("➡️", on_click=move_player, args=("Right",))
+
+    down = st.columns([1, 1, 1])
+    with down[1]: st.button("⬇️", on_click=move_player, args=("Down",))
+
+    st.button("🔄 Start New Game", on_click=reset_game)
+
+with right_col:
+    st.markdown("### 📜 History")
+    for msg in reversed(st.session_state["messages"][-25:]):
         st.markdown(f"- {msg}")
