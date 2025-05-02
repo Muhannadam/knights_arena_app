@@ -71,7 +71,7 @@ def move_player(direction):
 def attack():
     if st.session_state["game_over"]: return
     if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
-        st.session_state["ai_hp"] -= 2
+        st.session_state["ai_hp"] -= 1
         st.session_state["messages"].append("🗡️ You attacked the AI!")
     else:
         st.session_state["messages"].append("No enemy in range.")
@@ -97,7 +97,7 @@ def reset_game():
 if "player_pos" not in st.session_state: reset_game()
 
 # واجهة
-st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena - MUHANNAD</h2>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns([2.2, 1.2, 1.8])
 
 with col1:
