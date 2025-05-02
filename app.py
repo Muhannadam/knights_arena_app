@@ -1,3 +1,6 @@
+!pip install simpleai
+!pip install streamlit
+
 import streamlit as st
 from simpleai.search import SearchProblem, astar
 
@@ -117,40 +120,37 @@ def reset_game():
     st.session_state["turn"] = 1
     st.session_state["game_over"] = False
 
-# Init session
+# Session state init
 if "player_pos" not in st.session_state:
     reset_game()
 
-# Layout: عمودين - يسار للعبة، يمين للتاريخ
-left, right = st.columns([3, 1])
+# 💡 تخطيط أفقي (عرضي) من ثلاث أعمدة
+left, middle, right = st.columns([2.5, 1, 2])
 
+# ✅ يسار: الشبكة والمعلومات
 with left:
     st.title("🛡️ Knight's Arena")
-
-    # إعلان الفائز
     if st.session_state["game_over"]:
         winner = "🎉 You win!" if st.session_state["ai_hp"] <= 0 else "💀 AI wins!"
         st.markdown(f"## {winner}")
-
     render_grid()
     st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
 
-    # أزرار الحركة والهجوم
+# ✅ وسط: الأزرار منظمة تحت بعضها
+with middle:
     st.markdown("### 🎮 Controls")
-    c1, c2, c3 = st.columns([1,1,1])
-    with c2: st.button("⬆️", on_click=move_player, args=("Up",))
-    c1, c2, c3 = st.columns([1,1,1])
-    with c1: st.button("⬅️", on_click=move_player, args=("Left",))
-    with c2: st.button("⚔️", on_click=attack)
-    with c3: st.button("➡️", on_click=move_player, args=("Right",))
-    c1, c2, c3 = st.columns([1,1,1])
-    with c2: st.button("⬇️", on_click=move_player, args=("Down",))
+    st.button("⬆️", on_click=move_player, args=("Up",), use_container_width=True)
+    col_l, col_c, col_r = st.columns(3)
+    with col_l: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
+    with col_c: st.button("⚔️", on_click=attack, use_container_width=True)
+    with col_r: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
+    st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+    st.button("🔄 Start New Game", on_click=reset_game, use_container_width=True)
 
-    st.button("🔄 Start New Game", on_click=reset_game)
-
+# ✅ يمين: التاريخ
 with right:
     st.markdown("### 📜 History")
-    st.markdown("<div style='max-height:420px; overflow:auto;'>", unsafe_allow_html=True)
-    for msg in reversed(st.session_state["messages"][-25:]):
+    st.markdown("<div style='max-height:450px; overflow:auto;'>", unsafe_allow_html=True)
+    for msg in reversed(st.session_state["messages"][-30:]):
         st.markdown(f"- {msg}")
     st.markdown("</div>", unsafe_allow_html=True)
