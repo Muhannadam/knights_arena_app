@@ -127,7 +127,7 @@ if "player_pos" not in st.session_state:
     reset_game()
 
 # UI
-st.title("🛡️ Knight's Arena - Streamlit Edition")
+st.title("🛡️ Knight's Arena")
 
 # Result announcement
 if st.session_state["game_over"]:
