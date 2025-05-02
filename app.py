@@ -19,11 +19,13 @@ def render_grid():
         grid[px][py] = "🧍"
         grid[ax][ay] = "🤖"
 
-    html = "<pre style='font-size:32px; line-height:1.8;'>"
+    # ✅ استخدم <br> للفصل بين الأسطر
+    html = "<div style='font-size:32px; line-height:1.5;'>"
     for row in grid:
-        html += " ".join(row) + "\n"
-    html += "</pre>"
+        html += " ".join(row) + "<br>"
+    html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
+
 
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
