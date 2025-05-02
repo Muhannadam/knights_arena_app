@@ -1,3 +1,6 @@
+!pip install simpleai
+!pip install streamlit
+
 import streamlit as st
 import numpy as np
 from simpleai.search import SearchProblem, astar
@@ -19,13 +22,11 @@ def render_grid():
         grid[px][py] = "🧍"
         grid[ax][ay] = "🤖"
 
-    # ✅ استخدم <br> للفصل بين الأسطر
     html = "<div style='font-size:32px; line-height:1.5;'>"
     for row in grid:
         html += " ".join(row) + "<br>"
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
-
 
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
