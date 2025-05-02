@@ -96,7 +96,7 @@ def attack():
         return
 
     if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
-        st.session_state["ai_hp"] -= 1
+        st.session_state["ai_hp"] -= 2
         st.session_state["messages"].append("🗡️ You attacked the AI!")
     else:
         st.session_state["messages"].append("No enemy in range.")
