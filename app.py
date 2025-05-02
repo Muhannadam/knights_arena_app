@@ -69,9 +69,9 @@ def attack(type="light"):
     if st.session_state["game_over"]: return
     if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
         damage = 1 if type == "light" else 2
-        label = "Light Hit" if type == "light" else "Sword Attack"
+        label = "🖐 Light Hit" if type == "light" else "🗡️ Sword Attack"
         st.session_state["ai_hp"] -= damage
-        st.session_state["messages"].append(f"{label}! You dealt {damage} damage.")
+        st.session_state["messages"].append(f"{label}: You dealt {damage} damage.")
     else:
         st.session_state["messages"].append("No enemy in range.")
     check_win()
@@ -106,13 +106,15 @@ with col1:
     st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
 
 with col2:
-    st.markdown("### 🎮 Move")
+    st.markdown("### 🎮 Movement")
     st.button("⬆️", on_click=move_player, args=("Up",), use_container_width=True)
     row = st.columns(3)
     with row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
-    with row[1]: st.button("⚔️ Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
-    with row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
-    st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+    with row[1]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
+    with row[2]: st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+
+    st.markdown("### ⚔️ Attack Options")
+    st.button("🖐 Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
     st.button("🗡️ Sword Attack", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
     st.button("🔄 Start New Game", on_click=reset_game, use_container_width=True)
 
