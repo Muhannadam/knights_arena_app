@@ -2,8 +2,28 @@ import random
 import streamlit as st
 from simpleai.search import SearchProblem, astar
 
+# Constants
 GRID_SIZE = 6
 ITEM_TYPES = ["❤️", "💣", "🗡️"]
+
+# Initialize game session
+if "player_pos" not in st.session_state:
+    st.session_state.player_pos = [0, 0]
+    st.session_state.ai_pos = [GRID_SIZE - 1, GRID_SIZE - 1]
+    st.session_state.player_hp = 10
+    st.session_state.ai_hp = 10
+    st.session_state.turn = 1
+    st.session_state.messages = []
+    st.session_state.game_over = False
+    st.session_state.items = {}
+
+def spawn_items():
+    items = {}
+    for _ in range(3):
+        x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
+        if [x, y] not in [st.session_state.player_pos, st.session_state.ai_pos]:
+            items[(x, y)] = random.choice(ITEM_TYPES)
+    return items
 
 def is_adjacent(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1
@@ -17,14 +37,6 @@ def reset_game():
     st.session_state.messages = []
     st.session_state.game_over = False
     st.session_state.items = spawn_items()
-
-def spawn_items():
-    items = {}
-    for _ in range(3):
-        x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
-        if [x, y] not in [st.session_state.player_pos, st.session_state.ai_pos]:
-            items[(x, y)] = random.choice(ITEM_TYPES)
-    return items
 
 def render_grid():
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
@@ -81,28 +93,21 @@ def attack():
 
 class AIProblem(SearchProblem):
     def actions(self, state):
-        actions = []
         x, y = state
-        if x > 0: actions.append("Up")
-        if x < GRID_SIZE - 1: actions.append("Down")
-        if y > 0: actions.append("Left")
-        if y < GRID_SIZE - 1: actions.append("Right")
-        return actions
+        return [d for d, dx, dy in [("Up",-1,0),("Down",1,0),("Left",0,-1),("Right",0,1)]
+                if 0 <= x+dx < GRID_SIZE and 0 <= y+dy < GRID_SIZE]
 
     def result(self, state, action):
         x, y = state
-        if action == "Up": x -= 1
-        elif action == "Down": x += 1
-        elif action == "Left": y -= 1
-        elif action == "Right": y += 1
-        return (x, y)
+        return {
+            "Up": (x - 1, y), "Down": (x + 1, y),
+            "Left": (x, y - 1), "Right": (x, y + 1)
+        }[action]
 
     def is_goal(self, state):
         return is_adjacent(state, tuple(st.session_state.player_pos))
 
-    def cost(self, state1, action, state2):
-        return 1
-
+    def cost(self, s1, a, s2): return 1
     def heuristic(self, state):
         px, py = st.session_state.player_pos
         return abs(state[0] - px) + abs(state[1] - py)
@@ -112,8 +117,7 @@ def ai_turn():
         st.session_state.player_hp -= 1
         st.session_state.messages.append("🤖 AI attacked you! (-1)")
     else:
-        problem = AIProblem(initial_state=tuple(st.session_state.ai_pos))
-        path = astar(problem)
+        path = astar(AIProblem(initial_state=tuple(st.session_state.ai_pos)))
         if len(path) > 1:
             st.session_state.ai_pos = list(path[1])
         st.session_state.messages.append("🤖 AI moved.")
@@ -129,14 +133,12 @@ def check_end():
         st.session_state.messages.append("💀 AI wins!")
         st.session_state.game_over = True
 
-# Streamlit UI
+# UI layout
 st.title("🛡️ Knight's Arena – with Random Items")
-if "player_pos" not in st.session_state:
-    reset_game()
 
 st.markdown(render_grid(), unsafe_allow_html=True)
-st.write(f"Turn: {st.session_state.turn} | Player HP: {st.session_state.player_hp} | AI HP: {st.session_state.ai_hp}")
-st.write("History:")
+st.write(f"Turn: {st.session_state.turn} | 🧍 HP: {st.session_state.player_hp} | 🤖 HP: {st.session_state.ai_hp}")
+st.write("**History:**")
 for msg in reversed(st.session_state.messages[-5:]):
     st.markdown(f"- {msg}")
 
@@ -150,10 +152,9 @@ if not st.session_state.game_over:
         if st.button("➡️ Right"): move_player("Right")
     if st.button("⬇️ Down"): move_player("Down")
     if st.button("⚔️ Attack"): attack()
-
     ai_turn()
     check_end()
     st.session_state.turn += 1
 else:
-    if st.button("🔄 Restart Game"):
+    if st.button("🔄 Restart"):
         reset_game()
