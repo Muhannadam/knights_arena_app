@@ -6,7 +6,7 @@ from simpleai.search import SearchProblem, astar
 GRID_SIZE = 6
 ITEM_TYPES = ["❤️", "💣", "🗡️"]
 
-# Initialize game session
+# Initialize session state (safe)
 if "player_pos" not in st.session_state:
     st.session_state.player_pos = [0, 0]
     st.session_state.ai_pos = [GRID_SIZE - 1, GRID_SIZE - 1]
@@ -15,6 +15,9 @@ if "player_pos" not in st.session_state:
     st.session_state.turn = 1
     st.session_state.messages = []
     st.session_state.game_over = False
+    st.session_state.items = {}  # ✅ prevent AttributeError
+
+if "items" not in st.session_state:
     st.session_state.items = {}
 
 def spawn_items():
