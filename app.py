@@ -6,7 +6,7 @@ from simpleai.search import SearchProblem, astar
 GRID_SIZE = 6
 ITEM_TYPES = ["❤️", "💣", "🗡️"]
 
-# Initialize session state (safe)
+# Initialize session state safely
 if "player_pos" not in st.session_state:
     st.session_state.player_pos = [0, 0]
     st.session_state.ai_pos = [GRID_SIZE - 1, GRID_SIZE - 1]
@@ -15,8 +15,9 @@ if "player_pos" not in st.session_state:
     st.session_state.turn = 1
     st.session_state.messages = []
     st.session_state.game_over = False
-    st.session_state.items = {}  # ✅ prevent AttributeError
+    st.session_state.items = {}
 
+# Ensure items exist every run
 if "items" not in st.session_state:
     st.session_state.items = {}
 
@@ -42,6 +43,9 @@ def reset_game():
     st.session_state.items = spawn_items()
 
 def render_grid():
+    if "items" not in st.session_state:
+        st.session_state.items = {}
+
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     px, py = st.session_state.player_pos
     ax, ay = st.session_state.ai_pos
