@@ -182,7 +182,7 @@ def check_win():
     st.session_state["messages"].append(result)
     stats = st.session_state["stats"]
     report = f"""
-📊 Battle Report:
+📊 Battle Report:\n
 Result: {result}  
 - 🧍 Player Moves: {stats['player_moves']}  
 - 🎯 Hits: {stats['player_hits']}  
