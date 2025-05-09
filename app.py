@@ -11,9 +11,6 @@ def render_grid():
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     for bx, by in st.session_state["blocked_tiles"]:
         grid[bx][by] = "🧱"
-    if st.session_state.get("bomb_tile"):
-        bx, by = st.session_state["bomb_tile"]["pos"]
-        grid[bx][by] = "💣"
     if st.session_state.get("powerup_pos"):
         pu_x, pu_y = st.session_state["powerup_pos"]
         grid[pu_x][pu_y] = "💊"
@@ -75,58 +72,56 @@ def manage_powerup():
             st.session_state["powerup_turn"] = None
             st.session_state["messages"].append(f"💊 {who.upper()} collected Power-Up! +2 HP.")
 
-def manage_bomb():
-    if "bomb_tile" in st.session_state and st.session_state["bomb_tile"]:
-        st.session_state["bomb_tile"]["timer"] -= 1
-        if st.session_state["bomb_tile"]["timer"] <= 0:
-            bx, by = st.session_state["bomb_tile"]["pos"]
-            for who in ["player", "ai"]:
-                x, y = st.session_state[f"{who}_pos"]
-                if (x, y) == (bx, by) or is_adjacent((x, y), (bx, by)):
-                    st.session_state[f"{who}_hp"] -= 3
-                    st.session_state["messages"].append(f"💥 Bomb exploded! {who.upper()} took 3 damage.")
-            st.session_state["bomb_tile"] = None
-    elif st.session_state["turn"] % 7 == 0:
-        while True:
-            x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
-            if (x, y) not in st.session_state["blocked_tiles"] and [x, y] not in [st.session_state["player_pos"], st.session_state["ai_pos"]]:
-                st.session_state["bomb_tile"] = {"pos": (x, y), "timer": 2}
-                st.session_state["messages"].append(f"💣 Bomb appeared at ({x}, {y})! Explodes in 2 turns.")
-                break
-
-def update_dynamic_walls():
-    if st.session_state["turn"] % 10 == 0:
-        blocked = set()
-        while len(blocked) < 5:
-            x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
-            if (x, y) not in [tuple(st.session_state["player_pos"]), tuple(st.session_state["ai_pos"])]:
-                if st.session_state.get("powerup_pos") and (x, y) == tuple(st.session_state["powerup_pos"]): continue
-                if st.session_state.get("bomb_tile") and (x, y) == st.session_state["bomb_tile"]["pos"]: continue
-                blocked.add((x, y))
-        st.session_state["blocked_tiles"] = list(blocked)
-        st.session_state["messages"].append("🧱 Map changed! New walls generated.")
-
 def ai_turn():
-    if st.session_state["ai_hp"] <= 0: return
+    if "ai_escape_turns" not in st.session_state:
+        st.session_state["ai_escape_turns"] = 0
+    ai_hp = st.session_state["ai_hp"]
+    player_hp = st.session_state["player_hp"]
     ai_pos = st.session_state["ai_pos"]
     player_pos = st.session_state["player_pos"]
+    powerup_pos = st.session_state.get("powerup_pos")
+    distance_to_player = abs(ai_pos[0] - player_pos[0]) + abs(ai_pos[1] - player_pos[1])
+    if ai_hp < 3 and distance_to_player <= 2:
+        st.session_state["ai_escape_turns"] = 2
+    if st.session_state["ai_escape_turns"] > 0:
+        st.session_state["ai_escape_turns"] -= 1
+        ax, ay = ai_pos
+        px, py = player_pos
+        options = [(ax - 1, ay), (ax + 1, ay), (ax, ay - 1), (ax, ay + 1)]
+        valid_moves = [pos for pos in options if 0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE and pos not in st.session_state["blocked_tiles"]]
+        def distance(pos): return abs(pos[0] - px) + abs(pos[1] - py)
+        if valid_moves:
+            best_move = max(valid_moves, key=distance)
+            st.session_state["ai_pos"] = list(best_move)
+            st.session_state["messages"].append(f"🤖 AI is retreating to {best_move}")
+        else:
+            st.session_state["messages"].append("🤖 AI tried to retreat but is blocked.")
+        return
     if is_adjacent(ai_pos, player_pos):
         st.session_state["player_hp"] -= 1
         st.session_state["messages"].append("🤖 AI attacked you!")
-    else:
+        return
+    if powerup_pos and ai_hp < 5 and distance_to_player > 2:
         try:
-            result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
+            result = astar(AStarMoveProblem(tuple(ai_pos), tuple(powerup_pos)))
             path = result.path()
             if path and len(path) > 1:
                 st.session_state["ai_pos"] = list(path[1][1])
-                st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]}")
-        except:
-            pass
+                st.session_state["messages"].append(f"🤖 AI moved to 💊 at {path[1][1]}")
+                return
+        except Exception as e:
+            st.session_state["messages"].append(f"A* error (to power-up): {e}")
+    try:
+        result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
+        path = result.path()
+        if path and len(path) > 1:
+            st.session_state["ai_pos"] = list(path[1][1])
+            st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
+    except Exception as e:
+        st.session_state["messages"].append(f"A* error: {e}")
 
 def move_player(direction):
-    if st.session_state["game_over"] or st.session_state["stamina"] <= 0:
-        st.session_state["messages"].append("⚠️ Not enough stamina!") if st.session_state["stamina"] <= 0 else None
-        return
+    if st.session_state["game_over"]: return
     x, y = st.session_state["player_pos"]
     nx, ny = x, y
     if direction == "Up" and x > 0: nx -= 1
@@ -136,86 +131,117 @@ def move_player(direction):
     if (nx, ny) not in st.session_state["blocked_tiles"]:
         st.session_state["player_pos"] = [nx, ny]
         st.session_state["messages"].append(f"🧍 Player moved {direction}")
-        st.session_state["stamina"] -= 1
+        st.session_state["stats"]["player_moves"] += 1
     else:
-        st.session_state["messages"].append("🚫 Move blocked!")
-    run_turn()
-
-def attack(type="light"):
-    if st.session_state["game_over"] or st.session_state["stamina"] <= 0:
-        st.session_state["messages"].append("⚠️ Not enough stamina!") if st.session_state["stamina"] <= 0 else None
-        return
-    dmg = 1 if type == "light" else 2
-    name = "🖐 Light Hit" if type == "light" else "🗡️ Sword"
-    if type == "special":
-        if st.session_state["turn"] % 7 != 0:
-            st.session_state["messages"].append("❌ Special not ready!")
-            return
-        dmg = 4
-        name = "💥 SPECIAL ATTACK"
-    if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
-        st.session_state["ai_hp"] -= dmg
-        st.session_state["messages"].append(f"{name}: {dmg} damage!")
-    else:
-        st.session_state["messages"].append("⚠️ No enemy in range.")
-    st.session_state["stamina"] -= 1
-    run_turn()
-
-def run_turn():
-    st.session_state["turn"] += 1
-    st.session_state["stamina"] = min(st.session_state["stamina"] + 1, 5)
+        st.session_state["messages"].append("🚫 Move blocked by wall!")
     manage_powerup()
-    manage_bomb()
-    update_dynamic_walls()
     ai_turn()
     check_win()
+    st.session_state["turn"] += 1
+    if st.session_state["stats"]["sword_cooldown"] > 0:
+        st.session_state["stats"]["sword_cooldown"] -= 1
+
+def attack(type="light"):
+    if st.session_state["game_over"]: return
+    if type == "sword":
+        if st.session_state["stats"]["sword_cooldown"] > 0:
+            st.session_state["messages"].append("🗡️ Sword is recharging!")
+            return
+        st.session_state["stats"]["sword_cooldown"] = 2
+        damage = 2
+        label = "🗡️ Sword Attack"
+    else:
+        damage = 1
+        label = "🖐 Light Hit"
+    if is_adjacent(st.session_state["player_pos"], st.session_state["ai_pos"]):
+        st.session_state["ai_hp"] -= damage
+        st.session_state["messages"].append(f"{label}: You dealt {damage} damage.")
+        st.session_state["stats"]["player_hits"] += 1
+    else:
+        st.session_state["messages"].append("No enemy in range.")
+        st.session_state["stats"]["player_misses"] += 1
+    manage_powerup()
+    ai_turn()
+    check_win()
+    st.session_state["turn"] += 1
+    if st.session_state["stats"]["sword_cooldown"] > 0:
+        st.session_state["stats"]["sword_cooldown"] -= 1
 
 def check_win():
-    p, a = st.session_state["player_hp"], st.session_state["ai_hp"]
-    if p <= 0 and a <= 0:
-        msg = "⚖️ Draw!"
-    elif a <= 0:
-        msg = "🎉 You win!"
-    elif p <= 0:
-        msg = "💀 AI wins!"
+    player_hp = st.session_state["player_hp"]
+    ai_hp = st.session_state["ai_hp"]
+    if player_hp <= 0 and ai_hp <= 0:
+        result = "⚖️ It's a draw!"
+    elif ai_hp <= 0:
+        result = "🎉 You win!"
+    elif player_hp <= 0:
+        result = "💀 AI wins!"
     else:
         return
     st.session_state["game_over"] = True
-    st.session_state["messages"].append(msg)
+    st.session_state["messages"].append(result)
+    stats = st.session_state["stats"]
+    report = f"""
+### 📊 Battle Report  
+- Result: {result}  
+- 🧍 Player Moves: {stats['player_moves']}  
+- 🎯 Hits: {stats['player_hits']}  
+- ❌ Misses: {stats['player_misses']}  
+- ⚔️ Sword Cooldown Remaining: {stats['sword_cooldown']}  
+"""
+    st.session_state["messages"].append(report)
 
 def reset_game():
+    blocked = set()
+    while len(blocked) < 5:
+        x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
+        if [x, y] not in [[0, 0], [GRID_SIZE-1, GRID_SIZE-1]]:
+            blocked.add((x, y))
     st.session_state.update({
-        "player_pos": [0, 0], "ai_pos": [GRID_SIZE - 1, GRID_SIZE - 1],
-        "player_hp": 10, "ai_hp": 10, "stamina": 5, "turn": 1, "game_over": False,
-        "messages": [], "powerup_pos": None, "powerup_turn": None,
-        "blocked_tiles": [], "bomb_tile": None
+        "player_pos": [0, 0],
+        "ai_pos": [GRID_SIZE - 1, GRID_SIZE - 1],
+        "player_hp": 10,
+        "ai_hp": 10,
+        "messages": [],
+        "turn": 1,
+        "game_over": False,
+        "powerup_pos": None,
+        "powerup_turn": None,
+        "ai_escape_turns": 0,
+        "blocked_tiles": list(blocked),
+        "stats": {
+            "player_moves": 0,
+            "player_hits": 0,
+            "player_misses": 0,
+            "sword_cooldown": 0
+        }
     })
-    update_dynamic_walls()
 
 if "player_pos" not in st.session_state:
     reset_game()
 
-st.title("🛡️ Knight's Arena")
-col1, col2, col3 = st.columns([2.2, 1.2, 1.6])
+st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena</h2>", unsafe_allow_html=True)
+col1, col2, col3 = st.columns([2.2, 1.2, 1.8])
 with col1:
     if st.session_state["game_over"]:
-        st.markdown(f"### {st.session_state['messages'][-1]}")
+        result_msg = st.session_state["messages"][-1]
+        st.markdown(f"<h4>{result_msg}</h4>", unsafe_allow_html=True)
     render_grid()
-    st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']} | ⚡ Stamina: {st.session_state['stamina']}/5")
+    st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
 with col2:
-    st.markdown("### 🎮 Move")
+    st.markdown("### 🎮 Movement")
     st.button("⬆️", on_click=move_player, args=("Up",), use_container_width=True)
-    row = st.columns(3)
-    with row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
-    with row[1]: st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
-    with row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
-    st.markdown("### ⚔️ Attack")
-    st.button("🖐 Light", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
-    st.button("🗡️ Sword", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
-    if st.session_state["turn"] % 7 == 0:
-        st.button("💥 Special", on_click=attack, kwargs={"type": "special"}, use_container_width=True)
+    mid_row = st.columns([1, 1, 1])
+    with mid_row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
+    with mid_row[1]: st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+    with mid_row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
+    st.markdown("### ⚔️ Attacks")
+    st.button("🖐 Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
+    st.button("🗡️ Sword Attack", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
     st.button("🔄 Restart", on_click=reset_game, use_container_width=True)
 with col3:
-    st.markdown("### 📜 Log")
-    for m in reversed(st.session_state["messages"][-20:]):
-        st.markdown(f"- {m}")
+    st.markdown("### 📜 History")
+    st.markdown("<div style='max-height:450px; overflow:auto;'>", unsafe_allow_html=True)
+    for msg in reversed(st.session_state["messages"][-30:]):
+        st.markdown(f"- {msg}")
+    st.markdown("</div>", unsafe_allow_html=True)
