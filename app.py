@@ -186,8 +186,7 @@ def check_win():
 - Result: {result}  
 - 🧍 Player Moves: {stats['player_moves']}  
 - 🎯 Hits: {stats['player_hits']}  
-- ❌ Misses: {stats['player_misses']}  
-- ⚔️ Sword Cooldown Remaining: {stats['sword_cooldown']}  
+- ❌ Misses: {stats['player_misses']}   
 """
     st.session_state["messages"].append(report)
 
