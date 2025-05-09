@@ -238,7 +238,7 @@ with col2:
     st.markdown("### ⚔️ Attacks")
     st.button("🖐 Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
     st.button("🗡️ Sword Attack", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
-    st.button("🔄 Restart", on_click=reset_game, use_container_width=True)
+    st.button("🔄 Start a New Game", on_click=reset_game, use_container_width=True)
 with col3:
     st.markdown("### 📜 History")
     st.markdown("<div style='max-height:450px; overflow:auto;'>", unsafe_allow_html=True)
