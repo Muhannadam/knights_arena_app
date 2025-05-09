@@ -105,24 +105,25 @@ def ai_turn():
             st.session_state["ai_pos"] = list(best_move)
             st.session_state["messages"].append(f"🤖 AI is retreating to {best_move}")
         else:
-    try:
-        # تحديد هدف AI: اللاعب أو Power-Up
-        target = tuple(st.session_state["player_pos"])
-        ai_hp = st.session_state["ai_hp"]
-        player_hp = st.session_state["player_hp"]
-        powerup_pos = st.session_state.get("powerup_pos")
+            try:
+                # تحديد هدف AI: اللاعب أو Power-Up
+                target = tuple(st.session_state["player_pos"])
+                ai_hp = st.session_state["ai_hp"]
+                player_hp = st.session_state["player_hp"]
+                powerup_pos = st.session_state.get("powerup_pos")
 
-        if powerup_pos and (player_hp - ai_hp >= 2):
-            target = tuple(powerup_pos)
-            st.session_state["messages"].append("🤖 AI changed target to 💊 Power-Up.")
+            if powerup_pos and (player_hp - ai_hp >= 2):
+                target = tuple(powerup_pos)
+                st.session_state["messages"].append("🤖 AI changed target to 💊 Power-Up.")
 
-        result = astar(AStarMoveProblem(tuple(st.session_state["ai_pos"]), target))
-        path = result.path()
-        if path and len(path) > 1:
-            st.session_state["ai_pos"] = list(path[1][1])
-            st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
-    except Exception as e:
-        st.session_state["messages"].append(f"A* error: {e}")
+            result = astar(AStarMoveProblem(tuple(st.session_state["ai_pos"]), target))
+            path = result.path()
+            if path and len(path) > 1:
+                st.session_state["ai_pos"] = list(path[1][1])
+                st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
+            except Exception as e:
+                st.session_state["messages"].append(f"A* error: {e}")
+
 
         return
 
