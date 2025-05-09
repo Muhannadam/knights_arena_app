@@ -73,12 +73,19 @@ def ai_turn():
         st.session_state["ai_escape_turns"] = 0
 
     ai_hp = st.session_state["ai_hp"]
+    player_hp = st.session_state["player_hp"]
     ai_pos = st.session_state["ai_pos"]
     player_pos = st.session_state["player_pos"]
+    powerup_pos = st.session_state.get("powerup_pos")
 
-    if ai_hp < 3 and st.session_state["ai_escape_turns"] == 0:
+    # المسافة بين AI واللاعب
+    distance_to_player = abs(ai_pos[0] - player_pos[0]) + abs(ai_pos[1] - player_pos[1])
+
+    # ----- السيناريو 1: AI ضعيف واللاعب قريب => اهرب
+    if ai_hp < 3 and distance_to_player <= 2:
         st.session_state["ai_escape_turns"] = 2
 
+    # ----- الهروب
     if st.session_state["ai_escape_turns"] > 0:
         st.session_state["ai_escape_turns"] -= 1
         ax, ay = ai_pos
@@ -94,26 +101,34 @@ def ai_turn():
             st.session_state["messages"].append("🤖 AI tried to retreat but is blocked.")
         return
 
+    # ----- السيناريو 2: AI قريب من اللاعب => اهجم
     if is_adjacent(ai_pos, player_pos):
         st.session_state["player_hp"] -= 1
         st.session_state["messages"].append("🤖 AI attacked you!")
-    else:
+        return
+
+    # ----- السيناريو 3: AI عنده فرصة يروح للـ 💊
+    if powerup_pos and ai_hp < 5 and distance_to_player > 2:
         try:
-            target = tuple(st.session_state["player_pos"])
-            player_hp = st.session_state["player_hp"]
-            powerup_pos = st.session_state.get("powerup_pos")
-
-            if powerup_pos and (player_hp - ai_hp >= 2):
-                target = tuple(powerup_pos)
-                st.session_state["messages"].append("🤖 AI changed target to 💊 Power-Up.")
-
-            result = astar(AStarMoveProblem(tuple(ai_pos), target))
+            result = astar(AStarMoveProblem(tuple(ai_pos), tuple(powerup_pos)))
             path = result.path()
             if path and len(path) > 1:
                 st.session_state["ai_pos"] = list(path[1][1])
-                st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
+                st.session_state["messages"].append(f"🤖 AI moved to 💊 at {path[1][1]}")
+                return
         except Exception as e:
-            st.session_state["messages"].append(f"A* error: {e}")
+            st.session_state["messages"].append(f"A* error (to power-up): {e}")
+
+    # ----- الوضع العادي: لاحق اللاعب
+    try:
+        result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
+        path = result.path()
+        if path and len(path) > 1:
+            st.session_state["ai_pos"] = list(path[1][1])
+            st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
+    except Exception as e:
+        st.session_state["messages"].append(f"A* error: {e}")
+
 
 def move_player(direction):
     if st.session_state["game_over"]: return
