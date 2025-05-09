@@ -82,7 +82,7 @@ def ai_turn():
     powerup_pos = st.session_state.get("powerup_pos")
     distance_to_player = abs(ai_pos[0] - player_pos[0]) + abs(ai_pos[1] - player_pos[1])
     if ai_hp < 3 and player_hp > ai_hp and distance_to_player <= 2:
-    st.session_state["ai_escape_turns"] = 2
+        st.session_state["ai_escape_turns"] = 2
     if st.session_state["ai_escape_turns"] > 0:
         st.session_state["ai_escape_turns"] -= 1
         ax, ay = ai_pos
