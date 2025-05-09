@@ -40,36 +40,50 @@ class AStarMoveProblem(SearchProblem):
     def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
 
 def ai_turn():
-    if st.session_state["ai_hp"] < 3:
-        # AI يتجنب اللاعب ويتراجع إن كان ضعيفًا
-        ax, ay = st.session_state["ai_pos"]
-        px, py = st.session_state["player_pos"]
+    # العد التنازلي للهروب
+    if "ai_escape_turns" not in st.session_state:
+        st.session_state["ai_escape_turns"] = 0
 
-        # احسب كل الحركات الممكنة وابتعد عن اللاعب
+    ai_hp = st.session_state["ai_hp"]
+    ai_pos = st.session_state["ai_pos"]
+    player_pos = st.session_state["player_pos"]
+
+    if ai_hp < 3 and st.session_state["ai_escape_turns"] == 0:
+        st.session_state["ai_escape_turns"] = 2  # يهرب لدورين
+
+    if st.session_state["ai_escape_turns"] > 0:
+        st.session_state["ai_escape_turns"] -= 1
+
+        ax, ay = ai_pos
+        px, py = player_pos
+
         options = [(ax - 1, ay), (ax + 1, ay), (ax, ay - 1), (ax, ay + 1)]
         valid_moves = [pos for pos in options if 0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE]
-        
-        # اختر الحركة التي تبتعد عن اللاعب أكثر
+
         def distance(pos): return abs(pos[0] - px) + abs(pos[1] - py)
+
         if valid_moves:
             best_move = max(valid_moves, key=distance)
             st.session_state["ai_pos"] = list(best_move)
             st.session_state["messages"].append(f"🤖 AI is retreating to {best_move}")
         else:
-            st.session_state["messages"].append("🤖 AI wanted to retreat but is blocked.")
-    elif is_adjacent(st.session_state["ai_pos"], st.session_state["player_pos"]):
+            st.session_state["messages"].append("🤖 AI tried to retreat but is blocked.")
+        return
+
+    # عودة AI للوضع الطبيعي بعد انتهاء الهروب
+    if is_adjacent(ai_pos, player_pos):
         st.session_state["player_hp"] -= 1
         st.session_state["messages"].append("🤖 AI attacked you!")
     else:
         try:
-            result = astar(AStarMoveProblem(tuple(st.session_state["ai_pos"]),
-                                             tuple(st.session_state["player_pos"])))
+            result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
             path = result.path()
             if path and len(path) > 1:
                 st.session_state["ai_pos"] = list(path[1][1])
                 st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
         except Exception as e:
             st.session_state["messages"].append(f"A* error: {e}")
+
 
 
 def move_player(direction):
