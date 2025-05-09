@@ -10,17 +10,25 @@ def render_grid():
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     px, py = st.session_state["player_pos"]
     ax, ay = st.session_state["ai_pos"]
+
+    # إضافة 💊 إن وجدت
+    if st.session_state.get("powerup_pos"):
+        pu_x, pu_y = st.session_state["powerup_pos"]
+        grid[pu_x][pu_y] = "💊"
+
     if is_adjacent((px, py), (ax, ay)):
         grid[px][py] = "🧍"
         grid[ax][ay] = "🔥"
     else:
         grid[px][py] = "🧍"
         grid[ax][ay] = "🤖"
+
     html = "<div style='font-size:28px; line-height:1.3;'>"
     for row in grid:
         html += " ".join(row) + "<br>"
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
+
 
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
@@ -38,6 +46,36 @@ class AStarMoveProblem(SearchProblem):
     def is_goal(self, state): return state == self.goal
     def cost(self, s1, a, s2): return 1
     def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
+
+import random
+
+def manage_powerup():
+    turn = st.session_state["turn"]
+
+    # إظهار 💊 كل 5 أدوار إن لم تكن موجودة
+    if turn % 5 == 0 and st.session_state["powerup_pos"] is None:
+        while True:
+            x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
+            if [x, y] != st.session_state["player_pos"] and [x, y] != st.session_state["ai_pos"]:
+                st.session_state["powerup_pos"] = [x, y]
+                st.session_state["powerup_turn"] = turn
+                st.session_state["messages"].append(f"💊 Power-Up appeared at ({x}, {y})!")
+                break
+
+    # حذف 💊 إذا مرت 3 أدوار
+    if st.session_state["powerup_pos"] and (turn - st.session_state["powerup_turn"] >= 3):
+        st.session_state["powerup_pos"] = None
+        st.session_state["powerup_turn"] = None
+        st.session_state["messages"].append("💊 Power-Up expired.")
+
+    # جمع 💊
+    for who in ["player", "ai"]:
+        pos = st.session_state[f"{who}_pos"]
+        if st.session_state["powerup_pos"] and pos == st.session_state["powerup_pos"]:
+            st.session_state[f"{who}_hp"] += 2
+            st.session_state["powerup_pos"] = None
+            st.session_state["powerup_turn"] = None
+            st.session_state["messages"].append(f"💊 {who.upper()} collected Power-Up! +2 HP.")
 
 def ai_turn():
     # العد التنازلي للهروب
@@ -95,6 +133,7 @@ def move_player(direction):
     elif direction == "Right" and y < GRID_SIZE - 1: y += 1
     st.session_state["player_pos"] = [x, y]
     st.session_state["messages"].append(f"🧍 Player moved {direction}")
+    manage_powerup()
     ai_turn()
     check_win()
     st.session_state["turn"] += 1
@@ -108,6 +147,7 @@ def attack(type="light"):
         st.session_state["messages"].append(f"{label}: You dealt {damage} damage.")
     else:
         st.session_state["messages"].append("No enemy in range.")
+    manage_powerup()
     ai_turn()
     check_win()
     st.session_state["turn"] += 1
@@ -126,14 +166,17 @@ def check_win():
         st.session_state["game_over"] = True
 
 def reset_game():
-    st.session_state.update({
+     st.session_state.update({
         "player_pos": [0, 0],
         "ai_pos": [GRID_SIZE - 1, GRID_SIZE - 1],
         "player_hp": 10,
         "ai_hp": 10,
         "messages": [],
         "turn": 1,
-        "game_over": False
+        "game_over": False,
+        "powerup_pos": None,
+        "powerup_turn": None,
+        
     })
 
 if "player_pos" not in st.session_state:
