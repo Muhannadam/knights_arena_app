@@ -1,5 +1,6 @@
 import streamlit as st
 from simpleai.search import SearchProblem, astar
+import random
 
 GRID_SIZE = 6
 
@@ -11,7 +12,6 @@ def render_grid():
     px, py = st.session_state["player_pos"]
     ax, ay = st.session_state["ai_pos"]
 
-    # إضافة 💊 إن وجدت
     if st.session_state.get("powerup_pos"):
         pu_x, pu_y = st.session_state["powerup_pos"]
         grid[pu_x][pu_y] = "💊"
@@ -28,7 +28,6 @@ def render_grid():
         html += " ".join(row) + "<br>"
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
-
 
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
@@ -47,12 +46,8 @@ class AStarMoveProblem(SearchProblem):
     def cost(self, s1, a, s2): return 1
     def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
 
-import random
-
 def manage_powerup():
     turn = st.session_state["turn"]
-
-    # إظهار 💊 كل 5 أدوار إن لم تكن موجودة
     if turn % 5 == 0 and st.session_state["powerup_pos"] is None:
         while True:
             x, y = random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1)
@@ -61,14 +56,10 @@ def manage_powerup():
                 st.session_state["powerup_turn"] = turn
                 st.session_state["messages"].append(f"💊 Power-Up appeared at ({x}, {y})!")
                 break
-
-    # حذف 💊 إذا مرت 3 أدوار
     if st.session_state["powerup_pos"] and (turn - st.session_state["powerup_turn"] >= 3):
         st.session_state["powerup_pos"] = None
         st.session_state["powerup_turn"] = None
         st.session_state["messages"].append("💊 Power-Up expired.")
-
-    # جمع 💊
     for who in ["player", "ai"]:
         pos = st.session_state[f"{who}_pos"]
         if st.session_state["powerup_pos"] and pos == st.session_state["powerup_pos"]:
@@ -78,7 +69,6 @@ def manage_powerup():
             st.session_state["messages"].append(f"💊 {who.upper()} collected Power-Up! +2 HP.")
 
 def ai_turn():
-    # العد التنازلي للهروب
     if "ai_escape_turns" not in st.session_state:
         st.session_state["ai_escape_turns"] = 0
 
@@ -87,61 +77,43 @@ def ai_turn():
     player_pos = st.session_state["player_pos"]
 
     if ai_hp < 3 and st.session_state["ai_escape_turns"] == 0:
-        st.session_state["ai_escape_turns"] = 2  # يهرب لدورين
+        st.session_state["ai_escape_turns"] = 2
 
     if st.session_state["ai_escape_turns"] > 0:
         st.session_state["ai_escape_turns"] -= 1
-
         ax, ay = ai_pos
         px, py = player_pos
-
         options = [(ax - 1, ay), (ax + 1, ay), (ax, ay - 1), (ax, ay + 1)]
         valid_moves = [pos for pos in options if 0 <= pos[0] < GRID_SIZE and 0 <= pos[1] < GRID_SIZE]
-
         def distance(pos): return abs(pos[0] - px) + abs(pos[1] - py)
-
         if valid_moves:
             best_move = max(valid_moves, key=distance)
             st.session_state["ai_pos"] = list(best_move)
             st.session_state["messages"].append(f"🤖 AI is retreating to {best_move}")
         else:
-            try:
-                # تحديد هدف AI: اللاعب أو Power-Up
-                target = tuple(st.session_state["player_pos"])
-                ai_hp = st.session_state["ai_hp"]
-                player_hp = st.session_state["player_hp"]
-                powerup_pos = st.session_state.get("powerup_pos")
-
-            if powerup_pos and (player_hp - ai_hp >= 2):
-                target = tuple(powerup_pos)
-                st.session_state["messages"].append("🤖 AI changed target to 💊 Power-Up.")
-
-            result = astar(AStarMoveProblem(tuple(st.session_state["ai_pos"]), target))
-            path = result.path()
-            if path and len(path) > 1:
-                st.session_state["ai_pos"] = list(path[1][1])
-                st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
-            except Exception as e:
-                st.session_state["messages"].append(f"A* error: {e}")
-
-
+            st.session_state["messages"].append("🤖 AI tried to retreat but is blocked.")
         return
 
-    # عودة AI للوضع الطبيعي بعد انتهاء الهروب
     if is_adjacent(ai_pos, player_pos):
         st.session_state["player_hp"] -= 1
         st.session_state["messages"].append("🤖 AI attacked you!")
     else:
         try:
-            result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
+            target = tuple(st.session_state["player_pos"])
+            player_hp = st.session_state["player_hp"]
+            powerup_pos = st.session_state.get("powerup_pos")
+
+            if powerup_pos and (player_hp - ai_hp >= 2):
+                target = tuple(powerup_pos)
+                st.session_state["messages"].append("🤖 AI changed target to 💊 Power-Up.")
+
+            result = astar(AStarMoveProblem(tuple(ai_pos), target))
             path = result.path()
             if path and len(path) > 1:
                 st.session_state["ai_pos"] = list(path[1][1])
                 st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
         except Exception as e:
             st.session_state["messages"].append(f"A* error: {e}")
-
-
 
 def move_player(direction):
     if st.session_state["game_over"]: return
@@ -185,7 +157,7 @@ def check_win():
         st.session_state["game_over"] = True
 
 def reset_game():
-     st.session_state.update({
+    st.session_state.update({
         "player_pos": [0, 0],
         "ai_pos": [GRID_SIZE - 1, GRID_SIZE - 1],
         "player_hp": 10,
@@ -195,13 +167,12 @@ def reset_game():
         "game_over": False,
         "powerup_pos": None,
         "powerup_turn": None,
-        
+        "ai_escape_turns": 0
     })
 
 if "player_pos" not in st.session_state:
     reset_game()
 
-# Layout
 st.markdown("<h2 style='margin-bottom:0'>🛡️ Knight's Arena</h2>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns([2.2, 1.2, 1.8])
 
