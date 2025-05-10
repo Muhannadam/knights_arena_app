@@ -7,7 +7,6 @@ import streamlit as st
 from simpleai.search import SearchProblem, astar
 import random
 
-# Define the size of the game grid
 GRID_SIZE = 6
 
 # 📜 Game Rules text
@@ -23,11 +22,11 @@ game_rules = """
 - A full Battle Report is generated after the game ends.
 """
 
-# 📦 Utility function: Check if two positions are adjacent
+# 🧩 Check adjacency
 def is_adjacent(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1
 
-# 🎨 Display the game grid
+# 🎨 Render the game grid
 def render_grid():
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     for bx, by in st.session_state["blocked_tiles"]:
@@ -49,7 +48,7 @@ def render_grid():
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
-# 🤖 Define the A* search problem for AI movement
+# 🤖 AI Pathfinding with A*
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
         self.goal = goal
@@ -70,16 +69,11 @@ class AStarMoveProblem(SearchProblem):
         x, y = state
         return (x - 1, y) if action == 'Up' else (x + 1, y) if action == 'Down' else (x, y - 1) if action == 'Left' else (x, y + 1)
 
-    def is_goal(self, state):
-        return state == self.goal
+    def is_goal(self, state): return state == self.goal
+    def cost(self, s1, a, s2): return 1
+    def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
 
-    def cost(self, s1, a, s2):
-        return 1
-
-    def heuristic(self, state):
-        return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
-
-# 💊 Manage Power-Up appearance and collection
+# 💊 Manage Power-Ups
 def manage_powerup():
     turn = st.session_state["turn"]
     if turn % 5 == 0 and st.session_state["powerup_pos"] is None:
@@ -102,7 +96,7 @@ def manage_powerup():
             st.session_state["powerup_turn"] = None
             st.session_state["messages"].append(f"💊 {who.upper()} collected Power-Up! +2 HP.")
 
-# 🤖 AI behavior: attack, retreat, or move strategically
+# 🤖 AI behavior
 def ai_turn():
     if "ai_escape_turns" not in st.session_state:
         st.session_state["ai_escape_turns"] = 0
@@ -144,8 +138,8 @@ def ai_turn():
                 st.session_state["ai_pos"] = list(path[1][1])
                 st.session_state["messages"].append(f"🤖 AI moved to 💊 at {path[1][1]}")
                 return
-        except Exception as e:
-            st.session_state["messages"].append(f"A* error (to power-up): {e}")
+        except:
+            pass
 
     try:
         result = astar(AStarMoveProblem(tuple(ai_pos), tuple(player_pos)))
@@ -153,10 +147,10 @@ def ai_turn():
         if path and len(path) > 1:
             st.session_state["ai_pos"] = list(path[1][1])
             st.session_state["messages"].append(f"🤖 AI moved to {path[1][1]} using A*.")
-    except Exception as e:
-        st.session_state["messages"].append(f"A* error: {e}")
+    except:
+        pass
 
-# 🔼🔽⬅️➡️ Player movement handler
+# 🧍 Player movement
 def move_player(direction):
     if st.session_state["game_over"]: return
     x, y = st.session_state["player_pos"]
@@ -175,7 +169,7 @@ def move_player(direction):
     check_win()
     st.session_state["turn"] += 1
 
-# ⚔️ Player attack handler
+# ⚔️ Player attack
 def attack(type="light"):
     if st.session_state["game_over"]: return
     damage = 1 if type == "light" else 2
@@ -184,13 +178,13 @@ def attack(type="light"):
         st.session_state["ai_hp"] -= damage
         st.session_state["messages"].append(f"{label}: You dealt {damage} damage.")
     else:
-        st.session_state["messages"].append("No enemy in range.")
+        st.session_state["messages"].append("⚠️ No enemy in range.")
     manage_powerup()
     ai_turn()
     check_win()
     st.session_state["turn"] += 1
 
-# 🏆 Check if the game is over
+# 🏆 Check winning conditions
 def check_win():
     player_hp = st.session_state["player_hp"]
     ai_hp = st.session_state["ai_hp"]
@@ -225,35 +219,35 @@ def reset_game():
         "blocked_tiles": list(blocked),
     })
 
-# Initialize session
+# Initialize game
 if "player_pos" not in st.session_state:
     reset_game()
 
-# 🎮 Game Layout
+# Layout
 st.title("🛡️ Knight's Arena")
 
-# Button to view Game Rules
-if st.button("📜 View Game Rules"):
-    st.markdown(game_rules)
-
 col1, col2, col3 = st.columns([2.2, 1.2, 1.6])
+
 with col1:
     if st.session_state["game_over"]:
-        result_msg = st.session_state["messages"][-1]
-        st.markdown(f"### {result_msg}")
+        st.markdown(f"### {st.session_state['messages'][-1]}")
     render_grid()
     st.markdown(f"**Turn {st.session_state['turn']}** | 🧍 HP: {st.session_state['player_hp']} | 🤖 HP: {st.session_state['ai_hp']}")
+
 with col2:
     st.markdown("### 🎮 Movement")
     st.button("⬆️", on_click=move_player, args=("Up",), use_container_width=True)
-    mid_row = st.columns(3)
-    with mid_row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
-    with mid_row[1]: st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
-    with mid_row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
+    row = st.columns(3)
+    with row[0]: st.button("⬅️", on_click=move_player, args=("Left",), use_container_width=True)
+    with row[1]: st.button("⬇️", on_click=move_player, args=("Down",), use_container_width=True)
+    with row[2]: st.button("➡️", on_click=move_player, args=("Right",), use_container_width=True)
     st.markdown("### ⚔️ Attacks")
     st.button("🖐 Light Hit", on_click=attack, kwargs={"type": "light"}, use_container_width=True)
     st.button("🗡️ Sword Attack", on_click=attack, kwargs={"type": "sword"}, use_container_width=True)
     st.button("🔄 Restart", on_click=reset_game, use_container_width=True)
+    if st.button("📜 View Game Rules", use_container_width=True):
+        st.markdown(game_rules)
+
 with col3:
     st.markdown("### 📜 History")
     st.markdown("<div style='max-height:450px; overflow:auto;'>", unsafe_allow_html=True)
