@@ -9,7 +9,7 @@ import random
 
 GRID_SIZE = 6
 
-# 📜 Game Rules text
+# Game Rules text
 game_rules = """
 ### 📜 Game Rules:
 - Move the player using arrow buttons (⬆️⬇️⬅️➡️).
@@ -22,11 +22,11 @@ game_rules = """
 - A full Battle Report is generated after the game ends.
 """
 
-# 🧩 Check adjacency
+# Check adjacency
 def is_adjacent(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1
 
-# 🎨 Render the game grid
+# Render the game grid
 def render_grid():
     grid = [["⬛" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     for bx, by in st.session_state["blocked_tiles"]:
@@ -48,7 +48,7 @@ def render_grid():
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
-# 🤖 AI Pathfinding with A*
+# AI Pathfinding with A*
 class AStarMoveProblem(SearchProblem):
     def __init__(self, start, goal):
         self.goal = goal
@@ -73,7 +73,7 @@ class AStarMoveProblem(SearchProblem):
     def cost(self, s1, a, s2): return 1
     def heuristic(self, state): return abs(state[0] - self.goal[0]) + abs(state[1] - self.goal[1])
 
-# 💊 Manage Power-Ups
+# Manage Power-Ups
 def manage_powerup():
     turn = st.session_state["turn"]
     if turn % 5 == 0 and st.session_state["powerup_pos"] is None:
@@ -96,7 +96,7 @@ def manage_powerup():
             st.session_state["powerup_turn"] = None
             st.session_state["messages"].append(f"💊 {who.upper()} collected Power-Up! +2 HP.")
 
-# 🤖 AI behavior
+# AI behavior
 def ai_turn():
     if "ai_escape_turns" not in st.session_state:
         st.session_state["ai_escape_turns"] = 0
@@ -150,7 +150,7 @@ def ai_turn():
     except:
         pass
 
-# 🧍 Player movement
+# Player movement
 def move_player(direction):
     if st.session_state["game_over"]: return
     x, y = st.session_state["player_pos"]
@@ -169,7 +169,7 @@ def move_player(direction):
     check_win()
     st.session_state["turn"] += 1
 
-# ⚔️ Player attack
+# Player attack
 def attack(type="light"):
     if st.session_state["game_over"]: return
     damage = 1 if type == "light" else 2
@@ -184,7 +184,7 @@ def attack(type="light"):
     check_win()
     st.session_state["turn"] += 1
 
-# 🏆 Check winning conditions
+# Check winning conditions
 def check_win():
     player_hp = st.session_state["player_hp"]
     ai_hp = st.session_state["ai_hp"]
@@ -199,7 +199,7 @@ def check_win():
     st.session_state["game_over"] = True
     st.session_state["messages"].append(result)
 
-# 🔄 Reset game state
+# Reset game state
 def reset_game():
     blocked = set()
     while len(blocked) < 5:
