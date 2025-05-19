@@ -58,11 +58,3 @@ pip install gradio
 ## 📸 Screenshot
 
 ![Knight's Arena Screenshot](./assets/knights_arena_screenshot.png)
-
----
-
-## 👨‍💻 Team Members
-
-- **Muhannad Almuntashiri** — 2503649
-- **Mohammed Talal Mursi** — 2503652
-- **Ghaith Omar Alhumaidi** — 2503650
